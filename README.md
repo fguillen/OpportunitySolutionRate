@@ -58,10 +58,12 @@ All data is saved automatically to `localStorage`. Your opportunities persist ac
 ## File Structure
 
 ```
-index.html    — the entire app (HTML + CSS + JS, ~1 170 lines)
+index.html         — markup only
 assets/
-  favicon.svg    — app icon
-  screenshot.png — app screenshot
+  style.css        — all styles
+  script.js        — all logic
+  favicon.svg      — app icon
+  screenshot.png   — app screenshot
 LICENSE
 README.md
 ```
