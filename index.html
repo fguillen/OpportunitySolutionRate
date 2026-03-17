@@ -788,6 +788,7 @@
     <span class="results-title">Opportunities</span>
     <div style="display:flex;align-items:center;gap:16px">
       <span class="results-count" id="results-count">0 items</span>
+      <button class="btn-export" onclick="exportCSV()" id="btn-export-csv" style="display:none">↓ Export CSV</button>
       <button class="btn-export" onclick="exportMarkdown()" id="btn-export" style="display:none">↓ Export MD</button>
       <button class="btn-clear" onclick="clearAll()">Clear all</button>
     </div>
@@ -945,6 +946,22 @@
     render();
   }
 
+  function exportCSV() {
+    if (!opportunities.length) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const header = 'Rank,Opportunity,Pain,Frequency,Build Cost,Time to Build,User Effort,Score';
+    const rows = opportunities.map((opp, i) =>
+      [i + 1, `"${opp.name.replace(/"/g, '""')}"`, opp.pain, opp.freq, opp.build, opp.time, opp.effort, formatScore(opp.score)].join(',')
+    );
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `osr-${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function exportMarkdown() {
     if (!opportunities.length) return;
     const date = new Date().toISOString().slice(0, 10);
@@ -994,7 +1011,8 @@
 
     count.textContent = `${opportunities.length} item${opportunities.length !== 1 ? 's' : ''}`;
 
-    const exportBtn = document.getElementById('btn-export');
+    const exportBtn    = document.getElementById('btn-export');
+    const exportCsvBtn = document.getElementById('btn-export-csv');
 
     if (!opportunities.length) {
       list.innerHTML = '';
@@ -1002,10 +1020,12 @@
       emptyEl.style.display = 'flex';
       strip.style.display = 'none';
       exportBtn.style.display = 'none';
+      exportCsvBtn.style.display = 'none';
       return;
     }
 
     exportBtn.style.display = 'inline-block';
+    exportCsvBtn.style.display = 'inline-block';
 
     emptyEl.style.display = 'none';
     strip.style.display = 'grid';
