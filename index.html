@@ -518,6 +518,44 @@
 
     .btn-del:hover { color: var(--neg); background: rgba(255,77,109,0.1); }
 
+    .btn-edit {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 4px 6px;
+      line-height: 1;
+      border-radius: 4px;
+      transition: color 0.2s, background 0.2s;
+      position: absolute;
+      top: 12px; right: 38px;
+    }
+
+    .btn-edit:hover { color: var(--teal); background: rgba(63,255,194,0.1); }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: border-color 0.2s, color 0.2s;
+      width: 100%;
+    }
+
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+
+    .opp-card.is-editing {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px var(--teal);
+    }
+
     /* ─── EMPTY STATE ─── */
     .empty {
       padding: 64px 0;
@@ -727,7 +765,8 @@
         </div>
       </div>
 
-      <button class="btn-add" onclick="addOpportunity()">+ Add Opportunity</button>
+      <button class="btn-add" id="btn-add" onclick="addOpportunity()">+ Add Opportunity</button>
+      <button class="btn-cancel" id="btn-cancel" onclick="cancelEdit()" style="display:none">Cancel</button>
     </div>
 
     <!-- COL 3: Preview -->
@@ -778,6 +817,7 @@
 
 <script>
   let opportunities = JSON.parse(localStorage.getItem('osr-opps') || '[]');
+  let editingId = null;
 
   // Cache before any render can remove it from the DOM via innerHTML = ''
   const emptyEl = document.getElementById('empty-state');
@@ -849,12 +889,51 @@
     const effort = +effortSlider.value;
     const score  = calcScore(pain, freq, build, time, effort);
 
-    opportunities.push({ id: Date.now(), name, pain, freq, build, time, effort, score });
-    opportunities.sort((a, b) => b.score - a.score);
+    if (editingId !== null) {
+      const opp = opportunities.find(o => o.id === editingId);
+      if (opp) { opp.name = name; opp.pain = pain; opp.freq = freq; opp.build = build; opp.time = time; opp.effort = effort; opp.score = score; }
+      opportunities.sort((a, b) => b.score - a.score);
+      exitEditMode();
+    } else {
+      opportunities.push({ id: Date.now(), name, pain, freq, build, time, effort, score });
+      opportunities.sort((a, b) => b.score - a.score);
+      nameEl.value = '';
+      nameEl.focus();
+    }
     save();
     render();
-    nameEl.value = '';
-    nameEl.focus();
+  }
+
+  function editOpportunity(id) {
+    const opp = opportunities.find(o => o.id === id);
+    if (!opp) return;
+    document.getElementById('opp-name').value = opp.name;
+    painSlider.value   = opp.pain;
+    freqSlider.value   = opp.freq;
+    buildSlider.value  = opp.build;
+    timeSlider.value   = opp.time;
+    effortSlider.value = opp.effort;
+    updatePreview();
+    editingId = id;
+    document.getElementById('btn-add').textContent = '✓ Update Opportunity';
+    document.getElementById('btn-cancel').style.display = 'block';
+    document.getElementById('opp-name').focus();
+    document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    render(); // re-render to highlight the edited card
+  }
+
+  function cancelEdit() {
+    exitEditMode();
+    render();
+  }
+
+  function exitEditMode() {
+    editingId = null;
+    document.getElementById('btn-add').textContent = '+ Add Opportunity';
+    document.getElementById('btn-cancel').style.display = 'none';
+    document.getElementById('opp-name').value = '';
+    [painSlider, freqSlider, buildSlider, timeSlider, effortSlider].forEach(s => s.value = 5);
+    updatePreview();
   }
 
   function deleteOpportunity(id) {
@@ -946,6 +1025,7 @@
       card.className = 'opp-card';
       card.style.setProperty('--score-color', color);
       card.style.animationDelay = `${i * 40}ms`;
+      if (opp.id === editingId) card.classList.add('is-editing');
 
       card.innerHTML = `
         <div class="opp-main">
@@ -984,6 +1064,7 @@
           <span class="rank-badge">#${i + 1}</span>
           <span class="score-label">score</span>
         </div>
+        <button class="btn-edit" onclick="editOpportunity(${opp.id})" title="Edit">✎</button>
         <button class="btn-del" onclick="deleteOpportunity(${opp.id})" title="Remove">×</button>
       `;
 
