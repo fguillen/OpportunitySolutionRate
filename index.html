@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSR — Opportunity Solution Rate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0E0E10;
+      --surface:  #16161A;
+      --border:   #2A2A30;
+      --text:     #E2DDD8;
+      --muted:    #6B6878;
+      --accent:   #FF5C35;
+      --teal:     #3FFFC2;
+      --yellow:   #FFD166;
+      --neg:      #FF4D6D;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-body: 'Outfit', sans-serif;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE OVERLAY ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.3;
+    }
+
+    /* ─── LAYOUT ─── */
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 48px 0 40px;
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .logo-block { display: flex; flex-direction: column; gap: 6px; }
+
+    .logo-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .formula-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 12px 20px;
+      color: var(--muted);
+      border-radius: 4px;
+    }
+
+    .formula-fraction {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .formula-numerator,
+    .formula-denominator {
+      padding: 4px 0;
+      white-space: nowrap;
+    }
+
+    .formula-divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      margin: 2px 0;
+    }
+
+    .formula-badge strong { font-weight: 600; }
+
+    /* ─── FORM ─── */
+    .form-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr 260px;
+      gap: 32px;
+      padding: 40px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    @media (max-width: 900px) {
+      .form-section { grid-template-columns: 1fr 1fr; }
+      .form-col-preview { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 580px) {
+      .form-section { grid-template-columns: 1fr; }
+      .form-col-preview { grid-column: auto; }
+    }
+
+    .form-col { display: flex; flex-direction: column; gap: 20px; }
+
+    .form-group-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 12px 16px;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); opacity: 0.5; }
+
+    /* ─── SLIDERS ─── */
+    .slider-group { display: flex; flex-direction: column; gap: 10px; }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-val {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .pain-color  { color: var(--accent); }
+    .freq-color  { color: var(--yellow); }
+    .denom-color { color: var(--teal); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"].pain-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255,92,53,0.5);
+      transition: box-shadow 0.2s;
+    }
+    input[type="range"].pain-slider::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 18px rgba(255,92,53,0.8);
+    }
+
+    input[type="range"].freq-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--yellow);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255,209,102,0.5);
+      transition: box-shadow 0.2s;
+    }
+    input[type="range"].freq-slider::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 18px rgba(255,209,102,0.8);
+    }
+
+    input[type="range"].denom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--teal);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(63,255,194,0.4);
+      transition: box-shadow 0.2s;
+    }
+    input[type="range"].denom-slider::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 18px rgba(63,255,194,0.7);
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+
+    /* ─── PREVIEW SCORE ─── */
+    .score-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .score-preview-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .score-preview-num {
+      font-family: var(--font-head);
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1;
+      transition: color 0.3s, text-shadow 0.3s;
+    }
+
+    .score-preview-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ─── SUBMIT BUTTON ─── */
+    .btn-add {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      font-family: var(--font-head);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      align-self: flex-end;
+      width: 100%;
+    }
+
+    .btn-add:hover {
+      background: #ff7555;
+      box-shadow: 0 4px 24px rgba(255,92,53,0.4);
+    }
+
+    .btn-add:active { transform: scale(0.98); }
+
+    /* ─── RESULTS ─── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 36px 0 20px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .results-title {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .results-count {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-clear:hover { border-color: var(--neg); color: var(--neg); }
+
+    /* ─── OPPORTUNITY CARDS ─── */
+    .opportunities { display: flex; flex-direction: column; gap: 12px; }
+
+    .opp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px 24px;
+      align-items: center;
+      animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .opp-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--score-color, var(--teal));
+      border-radius: 3px 0 0 3px;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .opp-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+    .opp-name {
+      font-size: 16px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .opp-meta {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .meta-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .meta-dot.pain  { background: var(--accent); }
+    .meta-dot.freq  { background: var(--yellow); }
+    .meta-dot.denom { background: var(--teal); }
+
+    .meta-sep {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--border);
+      user-select: none;
+    }
+
+    /* ─── SCORE BAR ─── */
+    .score-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .score-bar-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--score-color, var(--teal));
+      width: 0;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ─── SCORE BADGE ─── */
+    .score-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 80px;
+    }
+
+    .score-num {
+      font-family: var(--font-head);
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--score-color, var(--teal));
+    }
+
+    .score-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .rank-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ─── DELETE BTN ─── */
+    .btn-del {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px 6px;
+      line-height: 1;
+      border-radius: 4px;
+      transition: color 0.2s, background 0.2s;
+      position: absolute;
+      top: 12px; right: 12px;
+    }
+
+    .btn-del:hover { color: var(--neg); background: rgba(255,77,109,0.1); }
+
+    /* ─── EMPTY STATE ─── */
+    .empty {
+      padding: 64px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      opacity: 0.3;
+    }
+
+    .empty-text {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+
+    /* ─── LEGEND ─── */
+    .legend {
+      display: flex;
+      gap: 24px;
+      padding-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend-swatch {
+      width: 12px; height: 12px;
+      border-radius: 2px;
+    }
+
+    /* ─── STAT STRIP ─── */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+      margin-top: 24px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat-val {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-block">
+      <span class="logo-tag">Opportunity Solution Rate</span>
+      <h1>What to<br>solve <span>first.</span></h1>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+      <div class="formula-badge">
+        <div class="formula-fraction">
+          <div class="formula-numerator">
+            <strong style="color:var(--accent)">Pain Value</strong>
+            &nbsp;×&nbsp;
+            <strong style="color:var(--yellow)">Frequency</strong>
+          </div>
+          <div class="formula-divider"></div>
+          <div class="formula-denominator">
+            <strong style="color:var(--teal)">Build Cost</strong>
+            &nbsp;×&nbsp;
+            <strong style="color:var(--teal)">Time</strong>
+            &nbsp;×&nbsp;
+            <strong style="color:var(--teal)">User Effort</strong>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--teal)"></div> High priority
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--yellow)"></div> Mid priority
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--neg)"></div> Low priority
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- FORM -->
+  <div class="form-section">
+
+    <!-- COL 1: Opportunity name + numerator sliders -->
+    <div class="form-col">
+      <label>
+        Opportunity / Problem
+        <input type="text" id="opp-name" placeholder="e.g. Manual invoice processing" />
+      </label>
+
+      <div class="form-group-label">Opportunity Value</div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <label style="gap:0;text-transform:uppercase;font-size:12px;color:var(--muted)">
+            Pain Value
+          </label>
+          <span class="slider-val pain-color" id="pain-val">5</span>
+        </div>
+        <input type="range" class="pain-slider" id="pain" min="1" max="10" value="5" />
+        <div class="slider-ticks">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <label style="gap:0;text-transform:uppercase;font-size:12px;color:var(--muted)">
+            Frequency
+          </label>
+          <span class="slider-val freq-color" id="freq-val">5</span>
+        </div>
+        <input type="range" class="freq-slider" id="frequency" min="1" max="10" value="5" />
+        <div class="slider-ticks">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 2: Denominator sliders + button -->
+    <div class="form-col">
+      <div class="form-group-label" style="margin-top:0">Solution Cost</div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <label style="gap:0;text-transform:uppercase;font-size:12px;color:var(--muted)">
+            Build Cost
+          </label>
+          <span class="slider-val denom-color" id="build-val">5</span>
+        </div>
+        <input type="range" class="denom-slider" id="buildCost" min="1" max="10" value="5" />
+        <div class="slider-ticks">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <label style="gap:0;text-transform:uppercase;font-size:12px;color:var(--muted)">
+            Time to Build
+          </label>
+          <span class="slider-val denom-color" id="time-val">5</span>
+        </div>
+        <input type="range" class="denom-slider" id="timeToBuild" min="1" max="10" value="5" />
+        <div class="slider-ticks">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <label style="gap:0;text-transform:uppercase;font-size:12px;color:var(--muted)">
+            User Effort
+          </label>
+          <span class="slider-val denom-color" id="effort-val">5</span>
+        </div>
+        <input type="range" class="denom-slider" id="userEffort" min="1" max="10" value="5" />
+        <div class="slider-ticks">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+        </div>
+      </div>
+
+      <button class="btn-add" onclick="addOpportunity()">+ Add Opportunity</button>
+    </div>
+
+    <!-- COL 3: Preview -->
+    <div class="form-col form-col-preview">
+      <div class="score-preview" id="score-preview">
+        <span class="score-preview-label">Preview Score</span>
+        <span class="score-preview-num" id="preview-num" style="color:var(--teal)">0.20</span>
+        <span class="score-preview-sub" id="preview-sub">(P × F) / (B × T × E)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-header">
+    <span class="results-title">Opportunities</span>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="results-count" id="results-count">0 items</span>
+      <button class="btn-clear" onclick="clearAll()">Clear all</button>
+    </div>
+  </div>
+
+  <div class="opportunities" id="opp-list">
+    <div class="empty" id="empty-state">
+      <div class="empty-icon">◎</div>
+      <div class="empty-text">No opportunities yet</div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stat-strip" id="stat-strip" style="display:none">
+    <div class="stat-box">
+      <span class="stat-label">Top Score</span>
+      <span class="stat-val" id="stat-top" style="color:var(--teal)">—</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Avg Score</span>
+      <span class="stat-val" id="stat-avg" style="color:var(--yellow)">—</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Opportunities</span>
+      <span class="stat-val" id="stat-count" style="color:var(--accent)">—</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let opportunities = JSON.parse(localStorage.getItem('osr-opps') || '[]');
+
+  const painSlider   = document.getElementById('pain');
+  const freqSlider   = document.getElementById('frequency');
+  const buildSlider  = document.getElementById('buildCost');
+  const timeSlider   = document.getElementById('timeToBuild');
+  const effortSlider = document.getElementById('userEffort');
+
+  const painVal   = document.getElementById('pain-val');
+  const freqVal   = document.getElementById('freq-val');
+  const buildVal  = document.getElementById('build-val');
+  const timeVal   = document.getElementById('time-val');
+  const effortVal = document.getElementById('effort-val');
+  const previewNum = document.getElementById('preview-num');
+
+  function calcScore(pain, freq, build, time, effort) {
+    return (pain * freq) / (build * time * effort);
+  }
+
+  function formatScore(s) {
+    if (s >= 10) return s.toFixed(1);
+    return s.toFixed(2);
+  }
+
+  function scoreColor(s) {
+    if (s > 5)  return 'var(--teal)';
+    if (s > 1)  return 'var(--yellow)';
+    return 'var(--neg)';
+  }
+
+  function updatePreview() {
+    const pain   = +painSlider.value;
+    const freq   = +freqSlider.value;
+    const build  = +buildSlider.value;
+    const time   = +timeSlider.value;
+    const effort = +effortSlider.value;
+
+    painVal.textContent   = pain;
+    freqVal.textContent   = freq;
+    buildVal.textContent  = build;
+    timeVal.textContent   = time;
+    effortVal.textContent = effort;
+
+    const s = calcScore(pain, freq, build, time, effort);
+    previewNum.textContent = formatScore(s);
+    previewNum.style.color = scoreColor(s);
+  }
+
+  [painSlider, freqSlider, buildSlider, timeSlider, effortSlider].forEach(sl => {
+    sl.addEventListener('input', updatePreview);
+  });
+  updatePreview();
+
+  document.getElementById('opp-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addOpportunity();
+  });
+
+  function addOpportunity() {
+    const nameEl = document.getElementById('opp-name');
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); return; }
+
+    const pain   = +painSlider.value;
+    const freq   = +freqSlider.value;
+    const build  = +buildSlider.value;
+    const time   = +timeSlider.value;
+    const effort = +effortSlider.value;
+    const score  = calcScore(pain, freq, build, time, effort);
+
+    opportunities.push({ id: Date.now(), name, pain, freq, build, time, effort, score });
+    opportunities.sort((a, b) => b.score - a.score);
+    save();
+    render();
+    nameEl.value = '';
+    nameEl.focus();
+  }
+
+  function deleteOpportunity(id) {
+    opportunities = opportunities.filter(o => o.id !== id);
+    save();
+    render();
+  }
+
+  function clearAll() {
+    if (!opportunities.length) return;
+    opportunities = [];
+    save();
+    render();
+  }
+
+  function save() {
+    localStorage.setItem('osr-opps', JSON.stringify(opportunities));
+  }
+
+  function render() {
+    const list  = document.getElementById('opp-list');
+    const empty = document.getElementById('empty-state');
+    const strip = document.getElementById('stat-strip');
+    const count = document.getElementById('results-count');
+
+    count.textContent = `${opportunities.length} item${opportunities.length !== 1 ? 's' : ''}`;
+
+    if (!opportunities.length) {
+      list.innerHTML = '';
+      list.appendChild(empty);
+      empty.style.display = 'flex';
+      strip.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    strip.style.display = 'grid';
+
+    // Stats
+    const topScore = opportunities[0].score;
+    const avgScore = opportunities.reduce((s, o) => s + o.score, 0) / opportunities.length;
+    document.getElementById('stat-top').textContent   = formatScore(topScore);
+    document.getElementById('stat-avg').textContent   = formatScore(avgScore);
+    document.getElementById('stat-count').textContent = opportunities.length;
+
+    // Cards — bar is relative to max score (100) on a log-ish scale
+    // We normalize barW as score% of max possible (100)
+    list.innerHTML = '';
+
+    opportunities.forEach((opp, i) => {
+      const color = scoreColor(opp.score);
+      const barW  = Math.min(100, (opp.score / 100) * 100).toFixed(2);
+
+      const card = document.createElement('div');
+      card.className = 'opp-card';
+      card.style.setProperty('--score-color', color);
+      card.style.animationDelay = `${i * 40}ms`;
+
+      card.innerHTML = `
+        <div class="opp-main">
+          <div class="opp-name">${escHtml(opp.name)}</div>
+          <div class="opp-meta">
+            <div class="meta-item">
+              <div class="meta-dot pain"></div>
+              Pain&nbsp;<strong style="color:var(--text)">${opp.pain}</strong>
+            </div>
+            <div class="meta-item">
+              <div class="meta-dot freq"></div>
+              Freq&nbsp;<strong style="color:var(--text)">${opp.freq}</strong>
+            </div>
+            <div class="meta-sep">/</div>
+            <div class="meta-item">
+              <div class="meta-dot denom"></div>
+              Build&nbsp;<strong style="color:var(--text)">${opp.build}</strong>
+            </div>
+            <div class="meta-item">
+              <div class="meta-dot denom"></div>
+              Time&nbsp;<strong style="color:var(--text)">${opp.time}</strong>
+            </div>
+            <div class="meta-item">
+              <div class="meta-dot denom"></div>
+              Effort&nbsp;<strong style="color:var(--text)">${opp.effort}</strong>
+            </div>
+          </div>
+          <div class="score-bar-wrap">
+            <div class="score-bar-track">
+              <div class="score-bar-fill" data-w="${barW}"></div>
+            </div>
+          </div>
+        </div>
+        <div class="score-badge">
+          <span class="score-num">${formatScore(opp.score)}</span>
+          <span class="rank-badge">#${i + 1}</span>
+          <span class="score-label">score</span>
+        </div>
+        <button class="btn-del" onclick="deleteOpportunity(${opp.id})" title="Remove">×</button>
+      `;
+
+      list.appendChild(card);
+    });
+
+    // Animate bars after paint
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.score-bar-fill').forEach(el => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  render();
+</script>
+</body>
+</html>
