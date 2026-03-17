@@ -357,6 +357,22 @@
 
     .btn-clear:hover { border-color: var(--neg); color: var(--neg); }
 
+    .btn-export {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--teal);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .btn-export:hover { border-color: var(--teal); background: rgba(63,255,194,0.06); }
+
     /* ─── OPPORTUNITY CARDS ─── */
     .opportunities { display: flex; flex-direction: column; gap: 12px; }
 
@@ -730,6 +746,7 @@
     <span class="results-title">Opportunities</span>
     <div style="display:flex;align-items:center;gap:16px">
       <span class="results-count" id="results-count">0 items</span>
+      <button class="btn-export" onclick="exportMarkdown()" id="btn-export" style="display:none">↓ Export MD</button>
       <button class="btn-clear" onclick="clearAll()">Clear all</button>
     </div>
   </div>
@@ -761,6 +778,9 @@
 
 <script>
   let opportunities = JSON.parse(localStorage.getItem('osr-opps') || '[]');
+
+  // Cache before any render can remove it from the DOM via innerHTML = ''
+  const emptyEl = document.getElementById('empty-state');
 
   const painSlider   = document.getElementById('pain');
   const freqSlider   = document.getElementById('frequency');
@@ -843,6 +863,37 @@
     render();
   }
 
+  function exportMarkdown() {
+    if (!opportunities.length) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const lines = [
+      '# Opportunity Solution Rate',
+      `_Exported: ${date}_`,
+      '',
+      '> **Formula:** Score = (Pain Value × Frequency) / (Build Cost × Time to Build × User Effort)',
+      '',
+      '| # | Opportunity | Pain | Freq | Build | Time | Effort | Score |',
+      '|---|-------------|:----:|:----:|:-----:|:----:|:------:|------:|',
+    ];
+
+    opportunities.forEach((opp, i) => {
+      lines.push(
+        `| ${i + 1} | ${opp.name} | ${opp.pain} | ${opp.freq} | ${opp.build} | ${opp.time} | ${opp.effort} | **${formatScore(opp.score)}** |`
+      );
+    });
+
+    const topScore  = formatScore(opportunities[0].score);
+    const avgScore  = formatScore(opportunities.reduce((s, o) => s + o.score, 0) / opportunities.length);
+    lines.push('', '---', '', `- **Top score:** ${topScore}`, `- **Avg score:** ${avgScore}`, `- **Total:** ${opportunities.length} opportunities`);
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `osr-${date}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function clearAll() {
     if (!opportunities.length) return;
     opportunities = [];
@@ -856,21 +907,25 @@
 
   function render() {
     const list  = document.getElementById('opp-list');
-    const empty = document.getElementById('empty-state');
     const strip = document.getElementById('stat-strip');
     const count = document.getElementById('results-count');
 
     count.textContent = `${opportunities.length} item${opportunities.length !== 1 ? 's' : ''}`;
 
+    const exportBtn = document.getElementById('btn-export');
+
     if (!opportunities.length) {
       list.innerHTML = '';
-      list.appendChild(empty);
-      empty.style.display = 'flex';
+      list.appendChild(emptyEl);
+      emptyEl.style.display = 'flex';
       strip.style.display = 'none';
+      exportBtn.style.display = 'none';
       return;
     }
 
-    empty.style.display = 'none';
+    exportBtn.style.display = 'inline-block';
+
+    emptyEl.style.display = 'none';
     strip.style.display = 'grid';
 
     // Stats
@@ -880,8 +935,7 @@
     document.getElementById('stat-avg').textContent   = formatScore(avgScore);
     document.getElementById('stat-count').textContent = opportunities.length;
 
-    // Cards — bar is relative to max score (100) on a log-ish scale
-    // We normalize barW as score% of max possible (100)
+    // Cards — bar normalized as % of max possible score (100)
     list.innerHTML = '';
 
     opportunities.forEach((opp, i) => {
